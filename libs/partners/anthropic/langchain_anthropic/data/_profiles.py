@@ -573,7 +573,7 @@ _PROFILES: dict[str, dict[str, Any]] = {
             "max",
         ],
         "reasoning_effort_default": "high",
-        "mid_conversation_system_messages": True,
+        "mid_conversation_system_messages": False,
         "mid_conversation_tools": False,
     },
     "claude-sonnet-5-5": {

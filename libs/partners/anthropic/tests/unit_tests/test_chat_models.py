@@ -2271,13 +2271,24 @@ def test_non_leading_system_hoisted_when_profile_does_not_declare_it(
     assert payload["messages"] == [{"role": "user", "content": "Review foo()"}]
 
 
+def test_non_leading_system_hoisted_on_sonnet_5_default_profile() -> None:
+    """Sonnet 5 doesn't offer mid-conversation system messages, so it hoists."""
+    model = ChatAnthropic(model="claude-sonnet-5")
+    with pytest.warns(UserWarning, match=_HOIST_WARNING):
+        payload = model._get_request_payload(
+            [HumanMessage("Review foo()"), SystemMessage("Be concise.")]
+        )
+    assert payload["system"] == "Be concise."
+    assert payload["messages"] == [{"role": "user", "content": "Review foo()"}]
+
+
 @pytest.mark.parametrize(
     ("model", "system_messages", "tools"),
     [
         ("claude-opus-5-5", True, True),
         ("claude-haiku-5-5", True, True),
-        # Sonnet 5 accepts a mid-conversation system message but rejects tools in it.
-        ("claude-sonnet-5", True, False),
+        # Sonnet 5 doesn't offer mid-conversation system messages or tool changes.
+        ("claude-sonnet-5", False, False),
         # Mythos isn't in models.dev, so its profile comes from augmentations alone.
         ("claude-mythos-5", True, True),
         ("claude-mythos-5-1", True, True),

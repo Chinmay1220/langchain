@@ -71,7 +71,9 @@ mid_conversation_tools = true
 structured_output = true
 reasoning_effort_levels = ["low", "medium", "high", "xhigh", "max"]
 reasoning_effort_default = "high"
-mid_conversation_system_messages = true
+# Anthropic does not offer mid-conversation system messages (or the tool
+# changes carried in them) on Sonnet 5; use the top-level `system` field.
+mid_conversation_system_messages = false
 mid_conversation_tools = false
 
 [overrides."claude-haiku-5-5"]
