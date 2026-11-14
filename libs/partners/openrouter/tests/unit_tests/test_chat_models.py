@@ -3418,6 +3418,37 @@ class TestEnvironmentConfiguration:
 # ===========================================================================
 
 
+# OpenRouter's documented mid-stream error: after content has streamed, the
+# error arrives at the top level next to a choice with `finish_reason: "error"`.
+_MID_STREAM_ERROR_CHUNKS: list[dict[str, Any]] = [
+    {
+        "id": "gen-1",
+        "object": "chat.completion.chunk",
+        "created": 1,
+        "model": MODEL_NAME,
+        "choices": [
+            {
+                "index": 0,
+                "delta": {"role": "assistant", "content": "The answer is"},
+                "finish_reason": None,
+            }
+        ],
+    },
+    {
+        "id": "gen-1",
+        "object": "chat.completion.chunk",
+        "created": 1,
+        "model": MODEL_NAME,
+        "error": {
+            "code": 429,
+            "message": "Rate limit exceeded",
+            "metadata": {"error_type": "rate_limit_exceeded"},
+        },
+        "choices": [{"index": 0, "delta": {"content": ""}, "finish_reason": "error"}],
+    },
+]
+
+
 class TestStreamingErrors:
     """Tests for error handling during streaming."""
 
@@ -3447,6 +3478,14 @@ class TestStreamingErrors:
         with pytest.raises(ValueError, match="OpenRouter API returned an error"):
             list(model.stream("Hello"))
 
+    def test_stream_mid_stream_error_with_choices_raises(self) -> None:
+        """Test that a mid-stream error sent alongside `choices` still raises."""
+        model = _make_model()
+        model.client = MagicMock()
+        model.client.chat.send.return_value = _MockSyncStream(_MID_STREAM_ERROR_CHUNKS)
+        with pytest.raises(ValueError, match="Rate limit exceeded"):
+            list(model.stream("Hello"))
+
     def test_stream_heartbeat_chunk_skipped(self) -> None:
         """Test that empty heartbeat chunks are silently skipped."""
         model = _make_model()
@@ -3473,6 +3512,16 @@ class TestStreamingErrors:
         ]
         model.client.chat.send_async = AsyncMock(
             return_value=_MockAsyncStream(error_chunks)
+        )
+        with pytest.raises(ValueError, match="Rate limit exceeded"):
+            chunks = [c async for c in model.astream("Hello")]  # noqa: F841
+
+    async def test_astream_mid_stream_error_with_choices_raises(self) -> None:
+        """Test that an async mid-stream error sent alongside `choices` raises."""
+        model = _make_model()
+        model.client = MagicMock()
+        model.client.chat.send_async = AsyncMock(
+            return_value=_MockAsyncStream(_MID_STREAM_ERROR_CHUNKS)
         )
         with pytest.raises(ValueError, match="Rate limit exceeded"):
             chunks = [c async for c in model.astream("Hello")]  # noqa: F841

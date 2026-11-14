@@ -606,14 +606,16 @@ class ChatOpenRouter(BaseChatModel):
         terminal_generation_info: dict[str, Any] = {}
         for chunk in self.client.chat.send(messages=message_dicts, **params):
             chunk_dict = chunk.model_dump(by_alias=True)
+            # A mid-stream error can arrive alongside a `choices` entry whose
+            # `finish_reason` is "error", so check for it before the choices.
+            if error := chunk_dict.get("error"):
+                msg = (
+                    f"OpenRouter API returned an error during streaming: "
+                    f"{error.get('message', str(error))} "
+                    f"(code: {error.get('code', 'unknown')})"
+                )
+                raise ValueError(msg)
             if not chunk_dict.get("choices"):
-                if error := chunk_dict.get("error"):
-                    msg = (
-                        f"OpenRouter API returned an error during streaming: "
-                        f"{error.get('message', str(error))} "
-                        f"(code: {error.get('code', 'unknown')})"
-                    )
-                    raise ValueError(msg)
                 # Usage-only chunk (no choices) — emit with usage_metadata
                 if usage := chunk_dict.get("usage"):
                     usage_metadata = _create_usage_metadata(usage)
@@ -698,14 +700,16 @@ class ChatOpenRouter(BaseChatModel):
             messages=message_dicts, **params
         ):
             chunk_dict = chunk.model_dump(by_alias=True)
+            # A mid-stream error can arrive alongside a `choices` entry whose
+            # `finish_reason` is "error", so check for it before the choices.
+            if error := chunk_dict.get("error"):
+                msg = (
+                    f"OpenRouter API returned an error during streaming: "
+                    f"{error.get('message', str(error))} "
+                    f"(code: {error.get('code', 'unknown')})"
+                )
+                raise ValueError(msg)
             if not chunk_dict.get("choices"):
-                if error := chunk_dict.get("error"):
-                    msg = (
-                        f"OpenRouter API returned an error during streaming: "
-                        f"{error.get('message', str(error))} "
-                        f"(code: {error.get('code', 'unknown')})"
-                    )
-                    raise ValueError(msg)
                 # Usage-only chunk (no choices) — emit with usage_metadata
                 if usage := chunk_dict.get("usage"):
                     usage_metadata = _create_usage_metadata(usage)
