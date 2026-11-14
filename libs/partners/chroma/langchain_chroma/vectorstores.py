@@ -1201,7 +1201,7 @@ class Chroma(VectorStore):
         """
         results = self.get(ids=list(ids))
         return [
-            Document(page_content=doc, metadata=meta, id=doc_id)
+            Document(page_content=doc, metadata=meta or {}, id=doc_id)
             for doc, meta, doc_id in zip(
                 results["documents"],
                 results["metadatas"],
